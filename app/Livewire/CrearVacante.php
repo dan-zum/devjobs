@@ -23,8 +23,9 @@ class CrearVacante extends Component
     public $descripcion;
     public $imagen;
     public $arreglo = [];
-    public $vacanteId = [];
+    public $candidatosArray = [];
     public $resultados_total = [];
+    public $vacantesId = [];
     public $usuarios = [];
 
     protected $rules = [
@@ -45,8 +46,9 @@ class CrearVacante extends Component
    
     public function mount(){ //en Laravel Livewire se utiliza para inicializar componentes con datos específicos antes de que se rendericen en la vista.
 
-        
-        $this->resultados_total = $resultados = Candidato::all();
+         
+
+        return;
         //$this->CNombre = $this->categoria;
         foreach($resultados as $resultado){
             //$this->arreglo[$resultado->email] = $resultado->email;
@@ -61,10 +63,32 @@ class CrearVacante extends Component
     }
 
     public function crearVacante(){
-
+        $this->resultados_total =  Vacante::where('categoria_id', $this->categoria)->get();
         //Consulta de categoria
         $consulta_categoria = Categoria::where('id', $this->categoria)->get();
 
+        foreach($consulta_categoria as $consulta){
+            $miCategoria = $consulta->categoria;
+        }
+        
+        
+        //Recorree el arraeglo de la consulta de vacantes para traerme el id de la vacante
+        foreach($this->resultados_total as $resultados){
+            $this->vacantesId[] = $resultados->id;
+        }
+         
+        //Aqui hago la consulta de candidatos de acuerdo al id de la vacante, y sacar a los usuarios para enviar el correo
+        foreach($this->vacantesId as $vacante){
+            $candidatos = Candidato::where('vacante_id', $vacante)->get();
+            //Aqui van los envios de correo a los usuarios con el nombre de la categoria de la vacante
+            
+        }
+
+      
+        return;
+       
+        
+        
     
         foreach($consulta_categoria as $key => $valor){
             //Comparacion para saber si el reclutador que esta postulando la vacante coincida con alguna de la base de datos
@@ -76,8 +100,8 @@ class CrearVacante extends Component
        
         
         foreach($this->resultados_total as $key=>$value){
-          
-            if(trim(strval($value['vacante_id'])) == trim(strval($this->categoria))){//trim elimina los espacios
+             
+            if(trim(strval($value['categoria_id'])) == trim(strval($this->categoria))){//trim elimina los espacios
                // dd($value['user_id']);
                 $this->usuarios[$value['user_id']] = $value['user_id'];
               
@@ -85,28 +109,24 @@ class CrearVacante extends Component
 
         }
         
-       
-        /*foreach($resultados as $key=>$value){
-            if(trim(strval($value['vacante_id'])) === trim(strval($this->categoria))){//trim elimina los espacios
-                dd('hay una coincidencia');
-            }else{
-                dd('No hay coincidencia');
-            }
-        }*/
         
         
         //Consulta de usuarios
         $consulta_correos = User::whereIn('id', $this->usuarios)->get();
-      
+       
         //A los correos que se enviaran
         foreach($consulta_correos as $value){
 
-            
-            Mail::to($value['email'])->send(new Recordatorio($detalle,$value['name']));
+            try{
+                Mail::to($value['email'])->send(new Recordatorio($detalle,$value['name']));
+
+            }catch(\Exception $e){
+                \Log::error('Error al enviar el correo a ' . $value['email']);
+            }        
             //session()->flash('message', 'Correo enviado');
         }
     
-        
+    
        
        $datos = $this->validate();//El dato ya tiene el request validado, ya solo lo pasamos
 
