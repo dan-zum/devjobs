@@ -1,0 +1,53 @@
+# Infraestructura CI: Jenkins + SonarQube
+#   cd infra && docker compose up -d --build
+name: devops
+
+services:
+  jenkins:
+    build: ./jenkins
+    container_name: jenkins
+    user: root
+    mem_limit: 2g
+    environment:
+      # Memoria limitada para equipos con 8 GB de RAM
+      - JAVA_OPTS=-Xmx768m -Xms256m
+      - SONAR_SCANNER_OPTS=-Xmx512m
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devops-net
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9000:9000"
+    mem_limit: 2g
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+      # Memoria limitada para equipos con 8 GB de RAM
+      - SONAR_WEB_JAVAOPTS=-Xmx512m -Xms128m
+      - SONAR_CE_JAVAOPTS=-Xmx512m -Xms128m
+      - SONAR_SEARCH_JAVAOPTS=-Xmx512m -Xms512m
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - devops-net
+    restart: unless-stopped
+
+networks:
+  devops-net:
+    name: devops-net
+
+volumes:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:

@@ -1,0 +1,60 @@
+# Despliegue de la aplicación (lo ejecuta Jenkins en la etapa CD)
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+name: laravel-prod
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: laravel-db
+    mem_limit: 512m
+    # Ajustes para consumir poca RAM (equipo de 8 GB)
+    command: --performance-schema=OFF --innodb-buffer-pool-size=64M
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  app:
+    image: ${DOCKERHUB_USER}/laravel-app:${IMAGE_TAG:-latest}
+    container_name: laravel-app
+    env_file: .env.prod
+    environment:
+      DB_HOST: db
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: ${DOCKERHUB_USER}/laravel-web:${IMAGE_TAG:-latest}
+    container_name: laravel-web
+    ports:
+      - "8081:80"
+    volumes:
+      - storage_public:/var/www/html/public/storage:ro
+    depends_on:
+      - app
+    networks:
+      - default
+      - devops-net
+    restart: unless-stopped
+
+networks:
+  devops-net:
+    external: true
+
+volumes:
+  mysql_data:
+  storage_public:

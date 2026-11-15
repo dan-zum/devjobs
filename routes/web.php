@@ -5,7 +5,7 @@ use App\Http\Controllers\VacanteController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\DB;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -32,6 +32,15 @@ Route::middleware('auth')->group(function () {
 //Route::get('/Miplantilla', [VacanteController::class, 'ejemplo'])->name('plantilla');
 //Notificaciones
 Route::get('/notificaciones', NotificacionController::class)->middleware(['auth', 'verified', 'rol.reclutador'])->name('notificaciones');
+
+Route::get('/health', function () {
+    try {
+        DB::connection()->getPdo();
+        return response()->json(['status' => 'UP', 'database' => 'UP']);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'DOWN', 'database' => 'DOWN'], 503);
+    }
+});
 require __DIR__.'/auth.php';
 
 
