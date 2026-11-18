@@ -35,6 +35,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # "Sano" solo cuando el entrypoint terminó de preparar Laravel
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/app-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
     restart: unless-stopped
 
   web:
@@ -45,7 +52,8 @@ services:
     volumes:
       - storage_public:/var/www/html/public/storage:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - default
       - devops-net

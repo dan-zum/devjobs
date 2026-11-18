@@ -51,6 +51,7 @@ pipeline {
             }
             steps {
                 sh 'cp .env.example .env && php artisan key:generate --force'
+                // Si alguna prueba falla, el pipeline se DETIENE aquí (no se despliega)
                 sh '''
                     mkdir -p reports
                     # Usa Pest si el proyecto lo tiene; si no, PHPUnit
@@ -110,7 +111,8 @@ pipeline {
                 withCredentials([file(credentialsId: 'laravel-env-prod', variable: 'ENV_FILE')]) {
                     sh 'cp "$ENV_FILE" .env.prod'
                 }
-                sh "${COMPOSE} up -d --remove-orphans"
+                // --wait: espera a que db, app y web estén "healthy" antes de seguir
+                sh "${COMPOSE} up -d --remove-orphans --wait --wait-timeout 180"
                 sh "${COMPOSE} exec -T app php artisan migrate --force"
             }
         }
